@@ -33,4 +33,7 @@ class StorageRepository:
         session = self.get_session(session_id)
         if session is None:
             return None
-        return session.systems[system_id]
+        for system in session.systems:
+            if system.id == system_id:
+                return system
+        return None

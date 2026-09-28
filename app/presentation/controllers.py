@@ -29,7 +29,7 @@ def get_session(session_id: str):
 
 
 @router.post("/sessions/{session_id}/systems", response_model=CreateSystemResponse)
-def create_system(session_id: str, request: CreateSystemRequest):
+def create_quantum_system(session_id: str, request: CreateSystemRequest):
     qubits = [Qubit(id=q.id, owner=q.owner) for q in request.qubits]
     system = micius.create_quantum_system(session_id, qubits)
     if system is None:
@@ -41,8 +41,8 @@ def create_system(session_id: str, request: CreateSystemRequest):
     )
 
 
-@router.get("/v1/sessions/{session_id}/systems/{system_id}")
-def get_system(session_id: str, system_id: str):
+@router.get("/sessions/{session_id}/systems/{system_id}")
+def get_quantum_system(session_id: str, system_id: str):
     system = micius.get_quantum_system(session_id, system_id)
     if system is None:
         raise HTTPException(status_code=404, detail="System not found")
