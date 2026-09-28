@@ -7,6 +7,7 @@ from app.domain.session import Session
 
 class StorageRepository:
     def __init__(self):
+        #TODO: Use a database instead of a dictionary
         self.storage: dict[str, Session] = {}
 
     def create_session(self) -> Session:
