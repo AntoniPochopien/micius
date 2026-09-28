@@ -14,8 +14,8 @@ def read_root():
 
 @router.post("/session")
 def create_session():
-    session_id = micius.create_session()
-    return {"session_id": session_id}
+    session = micius.create_session()
+    return session
 
 
 @router.get("/session/{session_id}")
