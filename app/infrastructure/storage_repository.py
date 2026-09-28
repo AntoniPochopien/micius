@@ -16,19 +16,19 @@ class StorageRepository:
         return session
 
     def get_session(self, session_id: str) -> Session | None:
-        return self.storage[session_id]
+        return self.storage.get(session_id)
 
-    def create_system(self, session_id: str, qubits: list[Qubit]) -> QuantumSystem | None:
+    def create_quantum_system(self, session_id: str, qubits: list[Qubit]) -> QuantumSystem | None:
         session = self.get_session(session_id)
         if session is None:
             return None
 
         system_id = str(uuid.uuid4())
         system = QuantumSystem(system_id, qubits)
-        session.systems[system_id] = system
+        session.systems.append(system)
         return system
     
-    def get_system(self, session_id: str, system_id: str) -> QuantumSystem | None:
+    def get_quantum_system(self, session_id: str, system_id: str) -> QuantumSystem | None:
         session = self.get_session(session_id)
         if session is None:
             return None

@@ -14,8 +14,8 @@ class Micius:
     def get_session(self, session_id: str) -> Session | None:
         return self.storage_repository.get_session(session_id)
 
-    def create_system(self, session_id: str, qubits: list[Qubit]) -> QuantumSystem | None:
-        return self.storage_repository.create_system(session_id, qubits)
+    def create_quantum_system(self, session_id: str, qubits: list[Qubit]) -> QuantumSystem | None:
+        return self.storage_repository.create_quantum_system(session_id, qubits)
     
-    def get_system(self, session_id: str, system_id: str) -> QuantumSystem | None:
-        return self.storage_repository.get_system(session_id, system_id)
+    def get_quantum_system(self, session_id: str, system_id: str) -> QuantumSystem | None:
+        return self.storage_repository.get_quantum_system(session_id, system_id)
