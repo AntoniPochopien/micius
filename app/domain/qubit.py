@@ -1,6 +1,4 @@
 class Qubit:
-    def __init__(self, id: str):
+    def __init__(self, id: str, owner: str):
         self.id = id
-
-    def get_id(self):
-        return self.id
+        self.owner = owner

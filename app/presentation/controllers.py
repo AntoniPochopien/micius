@@ -1,7 +1,9 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from app.application.micius import Micius
+from app.domain.qubit import Qubit
 from app.infrastructure.storage_repository import StorageRepository
+from app.presentation.schemas import CreateSystemRequest, CreateSystemResponse, QubitDto
 
 router = APIRouter()
 micius = Micius(StorageRepository())
@@ -20,4 +22,28 @@ def create_session():
 
 @router.get("/session/{session_id}")
 def get_session(session_id: str):
-    return micius.get_session(session_id)
+    session = micius.get_session(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return session
+
+
+@router.post("/v1/sessions/{session_id}/systems", response_model=CreateSystemResponse)
+def create_system(session_id: str, request: CreateSystemRequest):
+    qubits = [Qubit(id=q.id, owner=q.owner) for q in request.qubits]
+    system = micius.create_system(session_id, qubits)
+    if system is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    return CreateSystemResponse(
+        system_id=system.id,
+        qubits=[QubitDto(id=q.id, owner=q.owner) for q in system.qubits],
+    )
+
+
+@router.get("/v1/sessions/{session_id}/systems/{system_id}")
+def get_system(session_id: str, system_id: str):
+    system = micius.get_system(session_id, system_id)
+    if system is None:
+        raise HTTPException(status_code=404, detail="System not found")
+    return system
