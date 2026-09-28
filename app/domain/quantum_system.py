@@ -1,3 +1,5 @@
+from qiskit import QuantumCircuit
+
 from app.domain.qubit import Qubit
 
 

@@ -19,3 +19,18 @@ class Micius:
     
     def get_quantum_system(self, session_id: str, system_id: str) -> QuantumSystem | None:
         return self.storage_repository.get_quantum_system(session_id, system_id)
+    
+    def transfer_qubit(self, session_id: str, qubit_id: str, new_owner: str) -> Qubit | None:
+        session = self.get_session(session_id)
+        if session is None:
+            return None
+        _qubit: Qubit | None = None
+        for system in session.systems:
+            for qubit in system.qubits:
+                if qubit.id == qubit_id:
+                    qubit.owner = new_owner
+                    _qubit = qubit
+                    break
+        if _qubit is None:
+            return None
+        return self.storage_repository.transfer_qubit(session_id, _qubit.id, new_owner)

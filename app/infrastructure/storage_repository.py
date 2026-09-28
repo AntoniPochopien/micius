@@ -37,3 +37,14 @@ class StorageRepository:
             if system.id == system_id:
                 return system
         return None
+
+    def transfer_qubit(self, session_id: str, qubit_id: str, new_owner: str) -> Qubit | None:
+        session = self.get_session(session_id)
+        if session is None:
+            return None
+        for system in session.systems:
+            for qubit in system.qubits:
+                if qubit.id == qubit_id:
+                    qubit.owner = new_owner
+                    return qubit
+        return None

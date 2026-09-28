@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException
 from app.application.micius import Micius
 from app.domain.qubit import Qubit
 from app.infrastructure.storage_repository import StorageRepository
-from app.presentation.schemas import CreateSystemRequest, CreateSystemResponse, QubitDto
+from app.presentation.schemas import CreateSystemRequest, CreateSystemResponse, QubitDto, TransferQubitRequest
 
 router = APIRouter()
 micius = Micius(StorageRepository())
@@ -47,3 +47,10 @@ def get_quantum_system(session_id: str, system_id: str):
     if system is None:
         raise HTTPException(status_code=404, detail="System not found")
     return system
+
+@router.post("/sessions/{session_id}/qubits/{qubit_id}/transfer")
+def transfer_qubit(session_id: str, qubit_id: str, request: TransferQubitRequest):
+    qubit = micius.transfer_qubit(session_id, qubit_id, request.new_owner)
+    if qubit is None:
+        raise HTTPException(status_code=404, detail="Qubit not found")
+    return qubit
