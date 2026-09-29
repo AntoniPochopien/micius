@@ -29,7 +29,7 @@ class Micius:
             raise NotFoundError(f"System for session '{session_id}' not found")
         return created
 
-    def execute_job(self, session_id: str) -> dict[str, int]:
+    def execute_job(self, session_id: str) -> dict[str, dict[str, int]]:
         session = self.get_session(session_id)
         if session is None or session.system is None:
             raise NotFoundError(f"System for session '{session_id}' not found")

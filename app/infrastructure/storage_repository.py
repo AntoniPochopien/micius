@@ -56,5 +56,17 @@ class StorageRepository:
         session = self.get_session(session_id)
         if session is None or session.system is None:
             return None
+
+        qubits_by_id = {qubit.id: qubit for qubit in session.system.qubits}
+        owned_qubits_mapping: dict[int, str] = {}
+        for circuit_index, qubit_id in job.qubit_mapping.items():
+            qubit = qubits_by_id.get(qubit_id)
+            if qubit is None:
+                continue
+            if qubit.owner != job.caller:
+                continue
+            owned_qubits_mapping[int(circuit_index)] = qubit_id
+
+        job.owned_qubits_mapping = owned_qubits_mapping
         session.jobs.append(job)
         return job

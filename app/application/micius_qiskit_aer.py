@@ -1,72 +1,99 @@
 from qiskit import QuantumCircuit
-from qiskit_aer import AerSimulator
 
 from app.domain.job import Job
 from app.domain.quantum_system import QuantumSystem
 
 
 class MiciusQiskitAer:
-    def execute(self, jobs: list[Job], quantum_system: QuantumSystem) -> dict[str, int]:
-        qubits_by_id = {}
-        for qubit in quantum_system.qubits:
-            qubits_by_id[qubit.id] = qubit
+    """Executes jobs in submit order against a shared joint statevector.
 
-        simulator = AerSimulator()
-        counts = {}
+    Unitaries evolve the system state in place. Measurements collapse it and
+    return counts keyed by caller. Ownership is enforced per instruction.
+    """
+
+    def execute(
+        self,
+        jobs: list[Job],
+        quantum_system: QuantumSystem,
+    ) -> dict[str, dict[str, int]]:
+        results: dict[str, dict[str, int]] = {}
 
         for job in jobs:
-            caller_qubit_indexes = set()
+            results.setdefault(job.caller, {})
+            job_counts = self._execute_job(job, quantum_system)
+            for bitstring, count in job_counts.items():
+                results[job.caller][bitstring] = (
+                    results[job.caller].get(bitstring, 0) + count
+                )
 
-            for i in job.qubit_mapping:
-                qubit_id = job.qubit_mapping[i]
-                qubit = qubits_by_id.get(qubit_id)
+        return results
 
-                if qubit is None:
-                    continue
-                if qubit.owner != job.caller:
-                    continue
+    def _execute_job(self, job: Job, system: QuantumSystem) -> dict[str, int]:
+        owned = self._owned_circuit_to_system(job, system)
+        if len(owned) == 0:
+            return {}
 
-                caller_qubit_indexes.add(i)
+        unitary = QuantumCircuit(len(system.qubits))
+        # (system_qubit_index, clbit_index | None)
+        measures: list[tuple[int, int | None]] = []
 
-            if len(caller_qubit_indexes) == 0:
+        for instruction in job.circuit.data:
+            circuit_indexes = [
+                job.circuit.find_bit(qubit).index for qubit in instruction.qubits
+            ]
+            if len(circuit_indexes) == 0:
+                continue
+            if any(index not in owned for index in circuit_indexes):
                 continue
 
-            circuit = self._circuit_for_caller_qubits(job.circuit, caller_qubit_indexes)
-            result = simulator.run(circuit, shots=job.shots).result()
-            job_counts = result.get_counts()
+            system_indexes = [owned[index] for index in circuit_indexes]
+            operation = instruction.operation
 
-            for bitstring in job_counts:
-                count = job_counts[bitstring]
-                if bitstring in counts:
-                    counts[bitstring] = counts[bitstring] + count
-                else:
-                    counts[bitstring] = count
+            if operation.name == "measure":
+                clbit_index = None
+                if len(instruction.clbits) > 0:
+                    clbit_index = job.circuit.find_bit(instruction.clbits[0]).index
+                measures.append((system_indexes[0], clbit_index))
+                continue
 
-        return counts
+            if operation.name in ("barrier", "delay", "reset"):
+                continue
 
-    def _circuit_for_caller_qubits(
+            unitary.append(operation, system_indexes)
+
+        if len(unitary.data) > 0:
+            system.state = system.state.evolve(unitary)
+
+        if len(measures) == 0:
+            return {}
+
+        measures_sorted = sorted(
+            measures,
+            key=lambda item: item[1] if item[1] is not None else 0,
+        )
+        qargs = [system_index for system_index, _ in measures_sorted]
+        shots = max(job.shots, 1)
+
+        if shots == 1:
+            bitstring, system.state = system.state.measure(qargs)
+            return {str(bitstring): 1}
+
+        pre_measure = system.state.copy()
+        sampled = pre_measure.sample_counts(shots, qargs=qargs)
+        _, system.state = pre_measure.measure(qargs)
+        return {str(bitstring): int(count) for bitstring, count in sampled.items()}
+
+    def _owned_circuit_to_system(
         self,
-        circuit: QuantumCircuit,
-        caller_qubit_indexes: set[int],
-    ) -> QuantumCircuit:
-        filtered = QuantumCircuit(circuit.num_qubits, circuit.num_clbits)
+        job: Job,
+        system: QuantumSystem,
+    ) -> dict[int, int]:
+        owned: dict[int, int] = {}
 
-        for instruction in circuit.data:
-            qubit_indexes = []
-            for qubit in instruction.qubits:
-                index = circuit.find_bit(qubit).index
-                qubit_indexes.append(index)
-
-            if len(qubit_indexes) == 0:
+        for circuit_index, qubit_id in job.owned_qubits_mapping.items():
+            system_index = system.qubit_index(qubit_id)
+            if system_index is None:
                 continue
+            owned[int(circuit_index)] = system_index
 
-            uses_only_caller_qubits = True
-            for index in qubit_indexes:
-                if index not in caller_qubit_indexes:
-                    uses_only_caller_qubits = False
-                    break
-
-            if uses_only_caller_qubits:
-                filtered.append(instruction)
-
-        return filtered
+        return owned

@@ -30,3 +30,7 @@ class CreateJobResponse(BaseModel):
     caller: str
     qubit_mapping: dict[int, str]
     shots: int
+
+
+class ExecuteResponse(BaseModel):
+    results: dict[str, dict[str, int]]

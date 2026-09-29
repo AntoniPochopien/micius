@@ -15,6 +15,7 @@ from app.presentation.schemas import (
     CreateJobResponse,
     CreateQuantumSystemRequest,
     CreateSystemResponse,
+    ExecuteResponse,
     QubitDto,
     TransferQubitRequest,
 )
@@ -90,9 +91,11 @@ def create_job(session_id: str, request: CreateJobRequest):
         shots=job.shots,
     )
 
-@router.get("/sessions/{session_id}/jobs/execute")
-def get_job(session_id: str):
-    job = micius.execute_job(session_id)
-    if job is None:
-        raise HTTPException(status_code=404, detail="Job not found")
-    return job
+@router.get("/sessions/{session_id}/jobs/execute", response_model=ExecuteResponse)
+def execute_jobs(session_id: str):
+    try:
+        results = micius.execute_job(session_id)
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+
+    return ExecuteResponse(results=results)
