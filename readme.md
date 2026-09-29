@@ -2,7 +2,7 @@
 
 **A multi-party quantum runtime with ownership-aware qubit control.**
 
-Named after the *Micius* quantum satellite — the first craft to demonstrate space-to-ground quantum key distribution — this service lets multiple callers share one entangled system, own individual qubits, transfer them, and run circuits against a joint statevector without stepping on each other’s wire.
+Named after the *Micius* quantum satellite - the first craft to demonstrate space-to-ground quantum key distribution - this service lets multiple callers share one entangled system, own individual qubits, transfer them, and run circuits against a joint statevector without stepping on each other’s wire.
 
 ```
 ┌─────────────┐     circuit (QPY)      ┌──────────────────┐
@@ -26,7 +26,7 @@ Micius models a **shared quantum system** where:
 - the global statevector **evolves in place** across jobs
 - ownership can move mid-session via transfer
 
-Think: collaborative Bell experiments, delegated measurement, or multi-party protocol sketches — without hand-rolling state plumbing.
+Think: collaborative Bell experiments, delegated measurement, or multi-party protocol sketches - without hand-rolling state plumbing.
 
 ---
 
@@ -37,7 +37,7 @@ Think: collaborative Bell experiments, delegated measurement, or multi-party pro
 | API | **FastAPI** |
 | Circuits | **Qiskit** (QPY over the wire) |
 | Simulation | **Qiskit Aer** statevector |
-| Architecture | Clean Architecture — `domain` · `application` · `infrastructure` · `presentation` |
+| Architecture | Clean Architecture - `domain` · `application` · `infrastructure` · `presentation` |
 
 ---
 
@@ -50,7 +50,7 @@ Ephemeral workspaces with TTL. Create one, attach a system, queue jobs, execute.
 A joint register: `n` qubits → one `Statevector` of size `2ⁿ`, starting in `|0…0⟩`.
 
 ### Ownership
-Each qubit is tagged with an `owner`. Instructions targeting foreign qubits are skipped — not rejected mid-circuit — so partial ownership still produces a meaningful evolution.
+Each qubit is tagged with an `owner`. Instructions targeting foreign qubits are skipped - not rejected mid-circuit - so partial ownership still produces a meaningful evolution.
 
 ### Jobs
 Submitted as base64-encoded **QPY** circuits plus a `qubit_mapping` (`circuit index → qubit id`) and `shots`. Execution order = submission order. Unitaries evolve state; measurements collapse it and return counts keyed by caller.
@@ -107,6 +107,8 @@ Health check: `GET /health`
 Experimental runtime for ownership-aware multi-party quantum simulation. In-memory sessions, Aer-backed statevector, FastAPI surface.
 
 Built for protocols that need more than “one circuit, one owner.”
+
+An easy-to-use **SDK is on the way** - so you can drive Micius without wiring HTTP endpoints yourself. It’s being designed for Qiskit users specifically.
 
 ---
 
