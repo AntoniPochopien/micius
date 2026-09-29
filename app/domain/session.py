@@ -1,5 +1,6 @@
 import time
 
+from app.domain.job import Job
 from app.domain.quantum_system import QuantumSystem
 
 
@@ -10,6 +11,7 @@ class Session:
         self.ttl = ttl  # seconds
         self.created_at = int(time.time())
         self.system: QuantumSystem | None = None
+        self.jobs: list[Job] = []
 
     def is_expired(self) -> bool:
         return int(time.time()) - self.created_at > self.ttl

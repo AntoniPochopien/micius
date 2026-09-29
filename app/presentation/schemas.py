@@ -1,5 +1,4 @@
 from pydantic import BaseModel
-from qiskit import QuantumCircuit
 
 
 class QubitDto(BaseModel):
@@ -7,18 +6,27 @@ class QubitDto(BaseModel):
     owner: str
 
 
-class CreateSystemRequest(BaseModel):
+class CreateQuantumSystemRequest(BaseModel):
     qubits: list[QubitDto]
 
 
 class CreateSystemResponse(BaseModel):
     qubits: list[QubitDto]
 
+
 class TransferQubitRequest(BaseModel):
     new_owner: str
+
 
 class CreateJobRequest(BaseModel):
     caller: str
     circuit: str
+    qubit_mapping: dict[int, str]
+    shots: int
+
+
+class CreateJobResponse(BaseModel):
+    id: str
+    caller: str
     qubit_mapping: dict[int, str]
     shots: int

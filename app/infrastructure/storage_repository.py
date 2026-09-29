@@ -1,5 +1,6 @@
 import uuid
 
+from app.domain.job import Job
 from app.domain.qubit import Qubit
 from app.domain.quantum_system import QuantumSystem
 from app.domain.session import Session
@@ -50,3 +51,10 @@ class StorageRepository:
                 qubit.owner = new_owner
                 return qubit
         return None
+    
+    def create_job(self, session_id: str, job: Job) -> Job | None:
+        session = self.get_session(session_id)
+        if session is None or session.system is None:
+            return None
+        session.jobs.append(job)
+        return job

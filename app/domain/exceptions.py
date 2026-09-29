@@ -1,4 +1,4 @@
-class SystemNotFoundError(Exception):
+class NotFoundError(Exception):
     pass
 
 
