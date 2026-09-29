@@ -1,9 +1,16 @@
+import base64
+import io
+import uuid
+
 from fastapi import APIRouter, HTTPException
+from qiskit import qpy
 
 from app.application.micius import Micius
+from app.domain.exceptions import QubitOwnershipError, SystemNotFoundError
+from app.domain.job import Job
 from app.domain.qubit import Qubit
 from app.infrastructure.storage_repository import StorageRepository
-from app.presentation.schemas import CreateSystemRequest, CreateSystemResponse, QubitDto, TransferQubitRequest
+from app.presentation.schemas import CreateJobRequest, CreateSystemRequest, CreateSystemResponse, QubitDto, TransferQubitRequest
 
 router = APIRouter()
 micius = Micius(StorageRepository())
@@ -54,3 +61,27 @@ def transfer_qubit(session_id: str, qubit_id: str, request: TransferQubitRequest
     if qubit is None:
         raise HTTPException(status_code=404, detail="Qubit not found")
     return qubit
+
+@router.post("/sessions/{session_id}/systems/{quantum_system_id}/jobs")
+def create_job(session_id: str, quantum_system_id: str, request: CreateJobRequest):
+    circuit_bytes = base64.b64decode(request.circuit)
+    buffer = io.BytesIO(circuit_bytes)
+    circuits = qpy.load(buffer)
+    circuit = circuits[0] if isinstance(circuits, list) else circuits
+
+    try:
+        return micius.create_job(
+            session_id,
+            Job(
+                id=uuid.uuid4().hex,
+                quantum_system_id=quantum_system_id,
+                caller=request.caller,
+                circuit=circuit,
+                qubit_mapping=request.qubit_mapping,
+                shots=request.shots,
+            ),
+        )
+    except SystemNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e)) from e
+    except QubitOwnershipError as e:
+        raise HTTPException(status_code=403, detail=str(e)) from e

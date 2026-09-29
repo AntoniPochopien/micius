@@ -30,8 +30,12 @@ Pygments==2.21.0
 python-dotenv==1.2.3
 python-multipart==0.0.32
 PyYAML==6.0.3
+psutil==7.2.2
+python-dateutil==2.9.0.post0
 qiskit==2.5.2
+qiskit-aer==0.17.2
 rich==15.0.0
+six==1.17.0
 rich-toolkit==0.20.5
 rignore==0.8.1
 rustworkx==0.18.1
