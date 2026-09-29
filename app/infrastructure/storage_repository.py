@@ -17,7 +17,13 @@ class StorageRepository:
         return session
 
     def get_session(self, session_id: str) -> Session | None:
-        return self.storage.get(session_id)
+        session = self.storage.get(session_id)
+        if session is None:
+            return None
+        if session.is_expired():
+            del self.storage[session_id]
+            return None
+        return session
 
     def create_quantum_system(self, session_id: str, qubits: list[Qubit]) -> QuantumSystem | None:
         session = self.get_session(session_id)
@@ -26,25 +32,23 @@ class StorageRepository:
 
         system_id = str(uuid.uuid4())
         system = QuantumSystem(system_id, qubits)
-        session.systems.append(system)
+        session.system = system
         return system
-    
+
     def get_quantum_system(self, session_id: str, system_id: str) -> QuantumSystem | None:
         session = self.get_session(session_id)
-        if session is None:
+        if session is None or session.system is None:
             return None
-        for system in session.systems:
-            if system.id == system_id:
-                return system
+        if session.system.id == system_id:
+            return session.system
         return None
 
     def transfer_qubit(self, session_id: str, qubit_id: str, new_owner: str) -> Qubit | None:
         session = self.get_session(session_id)
-        if session is None:
+        if session is None or session.system is None:
             return None
-        for system in session.systems:
-            for qubit in system.qubits:
-                if qubit.id == qubit_id:
-                    qubit.owner = new_owner
-                    return qubit
+        for qubit in session.system.qubits:
+            if qubit.id == qubit_id:
+                qubit.owner = new_owner
+                return qubit
         return None
