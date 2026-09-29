@@ -20,14 +20,12 @@ class Micius:
     def create_quantum_system(self, session_id: str, qubits: list[Qubit]) -> QuantumSystem | None:
         return self.storage_repository.create_quantum_system(session_id, qubits)
     
-    def get_quantum_system(self, session_id: str, quantum_system_id: str) -> QuantumSystem | None:
-        return self.storage_repository.get_quantum_system(session_id, quantum_system_id)
-    
+
     def transfer_qubit(self, session_id: str, qubit_id: str, new_owner: str) -> Qubit | None:
         return self.storage_repository.transfer_qubit(session_id, qubit_id, new_owner)
 
     def create_job(self, session_id: str, job: Job) -> dict[str, int]:
-        system = self.get_quantum_system(session_id, job.quantum_system_id)
+        system = self.get_session(session_id).system
         if system is None:
-            raise SystemNotFoundError(f"System '{job.quantum_system_id}' not found")
+            raise SystemNotFoundError(f"System for session '{session_id}' not found")
         return MiciusQiskitAer().execute(job, system)

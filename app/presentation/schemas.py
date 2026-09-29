@@ -12,7 +12,6 @@ class CreateSystemRequest(BaseModel):
 
 
 class CreateSystemResponse(BaseModel):
-    system_id: str
     qubits: list[QubitDto]
 
 class TransferQubitRequest(BaseModel):

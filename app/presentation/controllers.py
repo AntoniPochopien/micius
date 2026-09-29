@@ -35,7 +35,7 @@ def get_session(session_id: str):
     return session
 
 
-@router.post("/sessions/{session_id}/systems", response_model=CreateSystemResponse)
+@router.post("/sessions/{session_id}/system", response_model=CreateSystemResponse)
 def create_quantum_system(session_id: str, request: CreateSystemRequest):
     qubits = [Qubit(id=q.id, owner=q.owner) for q in request.qubits]
     system = micius.create_quantum_system(session_id, qubits)
@@ -43,17 +43,9 @@ def create_quantum_system(session_id: str, request: CreateSystemRequest):
         raise HTTPException(status_code=404, detail="Session not found")
 
     return CreateSystemResponse(
-        system_id=system.id,
         qubits=[QubitDto(id=q.id, owner=q.owner) for q in system.qubits],
     )
 
-
-@router.get("/sessions/{session_id}/systems/{system_id}")
-def get_quantum_system(session_id: str, system_id: str):
-    system = micius.get_quantum_system(session_id, system_id)
-    if system is None:
-        raise HTTPException(status_code=404, detail="System not found")
-    return system
 
 @router.post("/sessions/{session_id}/qubits/{qubit_id}/transfer")
 def transfer_qubit(session_id: str, qubit_id: str, request: TransferQubitRequest):
@@ -62,8 +54,9 @@ def transfer_qubit(session_id: str, qubit_id: str, request: TransferQubitRequest
         raise HTTPException(status_code=404, detail="Qubit not found")
     return qubit
 
-@router.post("/sessions/{session_id}/systems/{quantum_system_id}/jobs")
-def create_job(session_id: str, quantum_system_id: str, request: CreateJobRequest):
+
+@router.post("/sessions/{session_id}/jobs")
+def create_job(session_id: str, request: CreateJobRequest):
     circuit_bytes = base64.b64decode(request.circuit)
     buffer = io.BytesIO(circuit_bytes)
     circuits = qpy.load(buffer)
@@ -74,7 +67,6 @@ def create_job(session_id: str, quantum_system_id: str, request: CreateJobReques
             session_id,
             Job(
                 id=uuid.uuid4().hex,
-                quantum_system_id=quantum_system_id,
                 caller=request.caller,
                 circuit=circuit,
                 qubit_mapping=request.qubit_mapping,

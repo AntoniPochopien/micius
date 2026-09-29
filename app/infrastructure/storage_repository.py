@@ -35,13 +35,11 @@ class StorageRepository:
         session.system = system
         return system
 
-    def get_quantum_system(self, session_id: str, system_id: str) -> QuantumSystem | None:
+    def get_quantum_system(self, session_id: str) -> QuantumSystem | None:
         session = self.get_session(session_id)
-        if session is None or session.system is None:
+        if session is None:
             return None
-        if session.system.id == system_id:
-            return session.system
-        return None
+        return session.system
 
     def transfer_qubit(self, session_id: str, qubit_id: str, new_owner: str) -> Qubit | None:
         session = self.get_session(session_id)
