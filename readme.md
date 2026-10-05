@@ -63,11 +63,14 @@ Hand a qubit to another party mid-session. Ownership updates; the joint state st
 ## Architecture
 
 ```
-app/
-├── domain/           # Session, Qubit, QuantumSystem, Job
-├── application/      # Micius orchestration + Aer executor
-├── infrastructure/   # In-memory storage repository
-└── presentation/     # FastAPI routes & schemas
+micius/
+├── backend/          # FastAPI runtime
+│   └── app/
+│       ├── domain/           # Session, Qubit, QuantumSystem, Job
+│       ├── application/      # Micius orchestration + Aer executor
+│       ├── infrastructure/   # In-memory storage repository
+│       └── presentation/     # FastAPI routes & schemas
+└── readme.md
 ```
 
 Domain stays free of FastAPI / Aer details. The executor enforces ownership per instruction against a shared joint state.
@@ -79,8 +82,9 @@ Domain stays free of FastAPI / Aer details. The executor enforces ownership per 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r backend/requirements.txt
 
+cd backend
 uvicorn app.main:app --reload
 ```
 
