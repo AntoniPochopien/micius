@@ -66,10 +66,12 @@ Hand a qubit to another party mid-session. Ownership updates; the joint state st
 micius/
 ├── backend/          # FastAPI runtime
 │   └── app/
-│       ├── domain/           # Session, Qubit, QuantumSystem, Job
-│       ├── application/      # Micius orchestration + Aer executor
-│       ├── infrastructure/   # In-memory storage repository
-│       └── presentation/     # FastAPI routes & schemas
+│       ├── domain/
+│       ├── application/
+│       ├── infrastructure/
+│       └── presentation/
+├── sdk/              # pip package `micius` (Qiskit client)
+│   └── micius/
 └── readme.md
 ```
 
@@ -78,6 +80,8 @@ Domain stays free of FastAPI / Aer details. The executor enforces ownership per 
 ---
 
 ## Quick start
+
+### Backend
 
 ```bash
 python -m venv .venv
@@ -89,6 +93,40 @@ uvicorn app.main:app --reload
 ```
 
 Open docs at [`http://127.0.0.1:8000/docs`](http://127.0.0.1:8000/docs).
+
+### SDK
+
+```bash
+pip install -e ./sdk
+```
+
+```python
+from qiskit import QuantumCircuit
+from micius import MiciusClient
+
+with MiciusClient("http://127.0.0.1:8000") as client:
+    session = client.create_session()
+    sid = session["id"]
+
+    client.create_system(
+        sid,
+        [{"id": "q0", "owner": "alice"}, {"id": "q1", "owner": "bob"}],
+    )
+
+    qc = QuantumCircuit(1, 1)
+    qc.h(0)
+    qc.measure(0, 0)
+
+    client.submit_job(
+        sid,
+        caller="alice",
+        circuit=qc,
+        qubit_mapping={0: "q0"},
+        shots=1024,
+    )
+
+    results = client.execute(sid)  # counts per caller
+```
 
 ---
 
@@ -111,8 +149,6 @@ Health check: `GET /health`
 Experimental runtime for ownership-aware multi-party quantum simulation. In-memory sessions, Aer-backed statevector, FastAPI surface.
 
 Built for protocols that need more than “one circuit, one owner.”
-
-An easy-to-use **SDK is on the way** - so you can drive Micius without wiring HTTP endpoints yourself. It’s being designed for Qiskit users specifically.
 
 ---
 
