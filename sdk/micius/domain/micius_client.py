@@ -2,64 +2,118 @@ from __future__ import annotations
 
 import base64
 import io
-from typing import Any
 
 from qiskit import QuantumCircuit, qpy
 
+from micius.domain.execute_result import ExecuteResult
+from micius.domain.failure import Failure, SessionNotFound
+from micius.domain.qubit import Qubit
 from micius.infrastructure.api_repository import ApiRepository
 
 
 class MiciusClient:
-    def __init__(self, base_url: str, *, timeout: float = 30.0):
+    def __init__(
+        self,
+        base_url: str,
+        caller: str,
+        *,
+        session_id: str | None = None,
+        timeout: float = 30.0,
+        shots: int = 1024,
+    ):
         self.api_repository = ApiRepository(base_url, timeout=timeout)
+        self._caller = caller
+        self._shots = shots
+        if session_id is None:
+            session = self.api_repository.create_session()
+            self._session_id = session.id
+            self._system_created = False
+        else:
+            try:
+                self.api_repository.get_session(session_id)
+            except Failure as exc:
+                self.api_repository.close()
+                if exc.status_code == 404:
+                    raise SessionNotFound(session_id) from exc
+                raise
+            self._session_id = session_id
+            self._system_created = True
+
+    @property
+    def session_id(self) -> str:
+        return self._session_id
+
+    def sync(self, circuit: QuantumCircuit) -> None:
+        if not self._system_created:
+            qubits = []
+            for i in range(circuit.num_qubits):
+                qubits.append(Qubit(id=f"q{i}", owner=self._caller))
+            self.api_repository.create_system(self._session_id, qubits)
+            self._system_created = True
+
+        qubit_mapping = {}
+        for i in range(circuit.num_qubits):
+            qubit_mapping[i] = f"q{i}"
+        self.api_repository.create_job(
+            self._session_id,
+            caller=self._caller,
+            circuit=_encode_circuit(circuit),
+            qubit_mapping=qubit_mapping,
+            shots=self._shots,
+        )
+
+    def transfer(self, qubit: int | str, new_owner: str) -> None:
+        qubit_id = f"q{qubit}" if isinstance(qubit, int) else qubit
+        self.api_repository.transfer_qubit(self._session_id, qubit_id, new_owner)
+
+    def measure(self, caller: str | None = None) -> None:
+        """Enqueue a measurement job for qubits currently owned by caller."""
+        owner = caller if caller is not None else self._caller
+        session = self.api_repository.get_session(self._session_id)
+        owned_ids = []
+        for qubit in session.qubits:
+            if qubit.owner == owner:
+                owned_ids.append(qubit.id)
+        if len(owned_ids) == 0:
+            return
+
+        circuit = QuantumCircuit(len(owned_ids), len(owned_ids))
+        for index in range(len(owned_ids)):
+            circuit.measure(index, index)
+
+        qubit_mapping = {}
+        for i in range(len(owned_ids)):
+            qubit_mapping[i] = owned_ids[i]
+        self.api_repository.create_job(
+            self._session_id,
+            caller=owner,
+            circuit=_encode_circuit(circuit),
+            qubit_mapping=qubit_mapping,
+            shots=self._shots,
+        )
+
+    def execute(self, *, measure: bool = True) -> ExecuteResult:
+        session = self.api_repository.get_session(self._session_id)
+        if measure and not session.executed:
+            measured_owners = set()
+            for job in session.jobs:
+                if job.has_measure:
+                    measured_owners.add(job.caller)
+
+            owners = set()
+            for qubit in session.qubits:
+                owners.add(qubit.owner)
+
+            for owner in sorted(owners - measured_owners):
+                self.measure(caller=owner)
+
+        return self.api_repository.execute_jobs(
+            self._session_id,
+            caller=self._caller,
+        )
 
     def health(self) -> bool:
         return self.api_repository.health()
-
-    def create_session(self) -> dict[str, Any]:
-        return self.api_repository.create_session()
-
-    def get_session(self, session_id: str) -> dict[str, Any]:
-        return self.api_repository.get_session(session_id)
-
-    def create_system(
-        self,
-        session_id: str,
-        qubits: list[dict[str, str]],
-    ) -> dict[str, Any]:
-        """Allocate a joint register. Each qubit: ``{"id": "...", "owner": "..."}``."""
-        return self.api_repository.create_system(session_id, qubits)
-
-    def transfer_qubit(
-        self,
-        session_id: str,
-        qubit_id: str,
-        new_owner: str,
-    ) -> dict[str, Any]:
-        return self.api_repository.transfer_qubit(session_id, qubit_id, new_owner)
-
-    def submit_job(
-        self,
-        session_id: str,
-        *,
-        caller: str,
-        circuit: QuantumCircuit,
-        qubit_mapping: dict[int, str],
-        shots: int,
-    ) -> dict[str, Any]:
-        """Queue a Qiskit circuit; SDK handles QPY + base64 for the wire format."""
-        return self.api_repository.create_job(
-            session_id,
-            caller=caller,
-            circuit=_encode_circuit(circuit),
-            qubit_mapping={str(k): v for k, v in qubit_mapping.items()},
-            shots=shots,
-        )
-
-    def execute(self, session_id: str) -> dict[str, dict[str, int]]:
-        """Run the session job queue. Returns counts keyed by caller."""
-        payload = self.api_repository.execute_jobs(session_id)
-        return payload["results"]
 
     def close(self) -> None:
         self.api_repository.close()

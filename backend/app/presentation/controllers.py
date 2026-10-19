@@ -9,6 +9,7 @@ from app.application.micius import Micius
 from app.domain.exceptions import NotFoundError
 from app.domain.job import Job
 from app.domain.qubit import Qubit
+from app.domain.session import Session
 from app.infrastructure.storage_repository import StorageRepository
 from app.presentation.schemas import (
     CreateJobRequest,
@@ -16,7 +17,9 @@ from app.presentation.schemas import (
     CreateQuantumSystemRequest,
     CreateSystemResponse,
     ExecuteResponse,
+    JobSummaryDto,
     QubitDto,
+    SessionResponse,
     TransferQubitRequest,
 )
 
@@ -28,31 +31,62 @@ micius = Micius(StorageRepository())
 def read_root():
     return {"status": "System is healthy"}
 
+def _session_response(session: Session) -> SessionResponse:
+    qubits = []
+    if session.system is not None:
+        for qubit in session.system.qubits:
+            qubits.append(QubitDto(id=qubit.id, owner=qubit.owner))
 
-@router.post("/session")
+    jobs = []
+    for job in session.jobs:
+        has_measure = False
+        for instruction in job.circuit.data:
+            if instruction.operation.name == "measure":
+                has_measure = True
+                break
+        jobs.append(
+            JobSummaryDto(
+                id=job.id,
+                caller=job.caller,
+                has_measure=has_measure,
+            )
+        )
+
+    return SessionResponse(
+        id=session.id,
+        qubits=qubits,
+        jobs=jobs,
+        executed=session.results is not None,
+    )
+
+
+@router.post("/session", response_model=SessionResponse)
 def create_session():
     session = micius.create_session()
-    return session
+    return _session_response(session)
 
 
-@router.get("/session/{session_id}")
+@router.get("/session/{session_id}", response_model=SessionResponse)
 def get_session(session_id: str):
     session = micius.get_session(session_id)
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
-    return session
+    return _session_response(session)
 
 
 @router.post("/sessions/{session_id}/system", response_model=CreateSystemResponse)
 def create_quantum_system(session_id: str, request: CreateQuantumSystemRequest):
-    qubits = [Qubit(id=q.id, owner=q.owner) for q in request.qubits]
+    qubits = []
+    for q in request.qubits:
+        qubits.append(Qubit(id=q.id, owner=q.owner))
     system = micius.create_quantum_system(session_id, qubits)
     if system is None:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    return CreateSystemResponse(
-        qubits=[QubitDto(id=q.id, owner=q.owner) for q in system.qubits],
-    )
+    response_qubits = []
+    for q in system.qubits:
+        response_qubits.append(QubitDto(id=q.id, owner=q.owner))
+    return CreateSystemResponse(qubits=response_qubits)
 
 
 @router.post("/sessions/{session_id}/qubits/{qubit_id}/transfer")
@@ -92,9 +126,9 @@ def create_job(session_id: str, request: CreateJobRequest):
     )
 
 @router.get("/sessions/{session_id}/jobs/execute", response_model=ExecuteResponse)
-def execute_jobs(session_id: str):
+def execute_jobs(session_id: str, caller: str | None = None):
     try:
-        results = micius.execute_job(session_id)
+        results = micius.execute_job(session_id, caller=caller)
     except NotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e)) from e
 

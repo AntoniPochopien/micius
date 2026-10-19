@@ -12,6 +12,7 @@ class Session:
         self.created_at = int(time.time())
         self.system: QuantumSystem | None = None
         self.jobs: list[Job] = []
+        self.results: dict[str, dict[str, int]] | None = None
 
     def is_expired(self) -> bool:
         return int(time.time()) - self.created_at > self.ttl

@@ -104,28 +104,14 @@ pip install -e ./sdk
 from qiskit import QuantumCircuit
 from micius import MiciusClient
 
-with MiciusClient("http://127.0.0.1:8000") as client:
-    session = client.create_session()
-    sid = session["id"]
-
-    client.create_system(
-        sid,
-        [{"id": "q0", "owner": "alice"}, {"id": "q1", "owner": "bob"}],
-    )
-
-    qc = QuantumCircuit(1, 1)
+with MiciusClient("http://127.0.0.1:8000", caller="alice") as client:
+    qc = QuantumCircuit(2, 2)
     qc.h(0)
-    qc.measure(0, 0)
+    qc.cx(0, 1)
+    qc.measure([0, 1], [0, 1])
 
-    client.submit_job(
-        sid,
-        caller="alice",
-        circuit=qc,
-        qubit_mapping={0: "q0"},
-        shots=1024,
-    )
-
-    results = client.execute(sid)  # counts per caller
+    client.sync(qc)           # create system (once) + queue job
+    results = client.execute()  # counts keyed by caller
 ```
 
 ---

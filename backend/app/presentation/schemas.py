@@ -6,6 +6,19 @@ class QubitDto(BaseModel):
     owner: str
 
 
+class JobSummaryDto(BaseModel):
+    id: str
+    caller: str
+    has_measure: bool
+
+
+class SessionResponse(BaseModel):
+    id: str
+    qubits: list[QubitDto] = []
+    jobs: list[JobSummaryDto] = []
+    executed: bool = False
+
+
 class CreateQuantumSystemRequest(BaseModel):
     qubits: list[QubitDto]
 
