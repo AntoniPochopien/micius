@@ -27,9 +27,6 @@ class Micius:
         created = self.storage_repository.create_job(session_id, job)
         if created is None:
             raise NotFoundError(f"System for session '{session_id}' not found")
-        session = self.get_session(session_id)
-        if session is not None:
-            session.results = None
         return created
 
     def execute_job(
@@ -45,6 +42,7 @@ class Micius:
             if len(session.jobs) == 0:
                 raise NotFoundError(f"No jobs found for session '{session_id}'")
             session.results = MiciusQiskitAer().execute(session.jobs, session.system)
+            self.storage_repository.save_session(session)
 
         if caller is None:
             return session.results

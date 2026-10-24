@@ -1,30 +1,63 @@
+import os
+import pickle
+import time
 import uuid
+
+import redis
 
 from app.domain.job import Job
 from app.domain.qubit import Qubit
 from app.domain.quantum_system import QuantumSystem
 from app.domain.session import Session
 
+SESSION_KEY_PREFIX = "session:"
+
 
 class StorageRepository:
-    def __init__(self):
-        #TODO: Use a database instead of a dictionary
-        self.storage: dict[str, Session] = {}
+    def __init__(self, redis_url: str | None = None):
+        url = redis_url or os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        self._redis = redis.Redis.from_url(url, decode_responses=False)
+
+    def ping(self) -> bool:
+        try:
+            return bool(self._redis.ping())
+        except redis.RedisError:
+            return False
+
+    def _key(self, session_id: str) -> str:
+        return f"{SESSION_KEY_PREFIX}{session_id}"
+
+    def _remaining_ttl(self, session: Session) -> int:
+        return session.ttl - (int(time.time()) - session.created_at)
+
+    def _load(self, session_id: str) -> Session | None:
+        raw = self._redis.get(self._key(session_id))
+        if raw is None:
+            return None
+        session: Session = pickle.loads(raw)
+        if session.is_expired():
+            self._redis.delete(self._key(session_id))
+            return None
+        return session
+
+    def _save(self, session: Session) -> None:
+        remaining = self._remaining_ttl(session)
+        if remaining <= 0:
+            self._redis.delete(self._key(session.id))
+            return
+        self._redis.set(self._key(session.id), pickle.dumps(session), ex=remaining)
+
+    def save_session(self, session: Session) -> None:
+        self._save(session)
 
     def create_session(self) -> Session:
         session_id = str(uuid.uuid4())
         session = Session(session_id)
-        self.storage[session_id] = session
+        self._save(session)
         return session
 
     def get_session(self, session_id: str) -> Session | None:
-        session = self.storage.get(session_id)
-        if session is None:
-            return None
-        if session.is_expired():
-            del self.storage[session_id]
-            return None
-        return session
+        return self._load(session_id)
 
     def create_quantum_system(self, session_id: str, qubits: list[Qubit]) -> QuantumSystem | None:
         session = self.get_session(session_id)
@@ -34,6 +67,7 @@ class StorageRepository:
         system_id = str(uuid.uuid4())
         system = QuantumSystem(system_id, qubits)
         session.system = system
+        self._save(session)
         return system
 
     def get_quantum_system(self, session_id: str) -> QuantumSystem | None:
@@ -49,9 +83,10 @@ class StorageRepository:
         for qubit in session.system.qubits:
             if qubit.id == qubit_id:
                 qubit.owner = new_owner
+                self._save(session)
                 return qubit
         return None
-    
+
     def create_job(self, session_id: str, job: Job) -> Job | None:
         session = self.get_session(session_id)
         if session is None or session.system is None:
@@ -69,4 +104,6 @@ class StorageRepository:
 
         job.owned_qubits_mapping = owned_qubits_mapping
         session.jobs.append(job)
+        session.results = None
+        self._save(session)
         return job

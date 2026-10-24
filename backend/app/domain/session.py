@@ -5,8 +5,8 @@ from app.domain.quantum_system import QuantumSystem
 
 
 class Session:
-
-    def __init__(self, id: str, ttl: int = 30):
+    SESSION_DEFAULT_TTL = 24 * 60 * 60 # 24 hours
+    def __init__(self, id: str, ttl: int = SESSION_DEFAULT_TTL):
         self.id = id
         self.ttl = ttl  # seconds
         self.created_at = int(time.time())

@@ -24,12 +24,15 @@ from app.presentation.schemas import (
 )
 
 router = APIRouter()
-micius = Micius(StorageRepository())
+storage_repository = StorageRepository()
+micius = Micius(storage_repository)
 
 
 @router.get("/health")
-def read_root():
-    return {"status": "System is healthy"}
+def health():
+    if not storage_repository.ping():
+        raise HTTPException(status_code=503, detail="Redis unavailable")
+    return {"status": "ok"}
 
 def _session_response(session: Session) -> SessionResponse:
     qubits = []
