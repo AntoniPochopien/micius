@@ -14,9 +14,8 @@ SESSION_KEY_PREFIX = "session:"
 
 
 class StorageRepository:
-    def __init__(self, redis_url: str | None = None):
-        url = redis_url or os.getenv("REDIS_URL", "redis://localhost:6379/0")
-        self._redis = redis.Redis.from_url(url, decode_responses=False)
+    def __init__(self, redis_url: str):
+        self._redis = redis.Redis.from_url(redis_url, decode_responses=False)
 
     def ping(self) -> bool:
         try:

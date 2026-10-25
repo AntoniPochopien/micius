@@ -1,5 +1,6 @@
 import base64
 import io
+import os
 import uuid
 
 from fastapi import APIRouter, HTTPException
@@ -24,14 +25,13 @@ from app.presentation.schemas import (
 )
 
 router = APIRouter()
-storage_repository = StorageRepository()
-micius = Micius(storage_repository)
+micius = Micius()
 
 
 @router.get("/health")
 def health():
-    if not storage_repository.ping():
-        raise HTTPException(status_code=503, detail="Redis unavailable")
+    if not micius.ping():
+        raise HTTPException(status_code=503, detail="Backend unavailable")
     return {"status": "ok"}
 
 def _session_response(session: Session) -> SessionResponse:

@@ -1,3 +1,4 @@
+import os
 from app.application.micius_qiskit_aer import MiciusQiskitAer
 from app.domain.exceptions import NotFoundError
 from app.domain.job import Job
@@ -6,10 +7,12 @@ from app.domain.quantum_system import QuantumSystem
 from app.domain.session import Session
 from app.infrastructure.storage_repository import StorageRepository
 
-
 class Micius:
-    def __init__(self, storage_repository: StorageRepository):
-        self.storage_repository = storage_repository
+    def __init__(self):
+        self.storage_repository = StorageRepository(redis_url=os.getenv("REDIS_URL"))
+    
+    def ping(self) -> bool:
+        return self.storage_repository.ping()
 
     def create_session(self) -> Session:
         return self.storage_repository.create_session()
