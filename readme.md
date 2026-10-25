@@ -6,10 +6,10 @@ Named after the *Micius* quantum satellite - the first craft to demonstrate spac
 
 ```
 ┌─────────────┐     circuit (QPY)      ┌──────────────────┐
-│  Caller A   │ ─────────────────────► │                  │
-└─────────────┘                        │     MICIUS       │
-┌─────────────┐     qubit transfer     │  shared system   │──► counts / caller
-│  Caller B   │ ─────────────────────► │  + ownership     │
+│  Caller A   │ ─────────────────────► │      MICIUS      │
+└─────────────┘                        │  shared system   │
+┌─────────────┐     qubit transfer     │   + ownership    │──► counts / caller
+│  Caller B   │ ─────────────────────► │                  │
 └─────────────┘                        └──────────────────┘
 ```
 
