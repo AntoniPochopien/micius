@@ -1,0 +1,17 @@
+global_options:
+  freezed:
+    runs_before:
+      - json_serializable
+  json_serializable:
+    runs_before:
+      - retrofit_generator
+    options:
+      field_rename: none
+      explicit_to_json: true
+
+targets:
+  $default:
+    builders:
+      auto_route_generator:auto_route_generator:
+        options:
+          enable_cached_builds: false

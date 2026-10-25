@@ -1,0 +1,14 @@
+{
+  "@@locale": "en",
+  "appName": "Micius Lab",
+  "homeTitle": "Home",
+  "retry": "Retry",
+  "unauthorized": "Unauthorized",
+  "forbidden": "Forbidden",
+  "serverError": "Server error",
+  "unexpected": "Something went wrong",
+  "login": "Log in",
+  "logout": "Log out",
+  "username": "Username",
+  "password": "Password"
+}
