@@ -16,17 +16,38 @@ API: [`http://127.0.0.1:8000`](http://127.0.0.1:8000) · docs: [`/docs`](http://
 
 ### Local
 
-Requires Redis (`REDIS_URL`, default `redis://localhost:6379/0`).
+Redis must be running locally before you start the API. Sessions are stored there; without Redis the app will fail on startup / health.
+
+**Env**
+
+| Variable | Required | Default | Description |
+| --- | --- | --- | --- |
+| `REDIS_URL` | no | `redis://localhost:6379/0` | Redis connection URL |
+
+**Start Redis** (pick one):
+
+```bash
+# Docker — Redis only, port 6379
+docker run -d --name micius-redis -p 6379:6379 redis:7-alpine
+
+# or Homebrew
+brew install redis && brew services start redis
+```
+
+**App**
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
+# optional if you use a non-default Redis
+export REDIS_URL=redis://localhost:6379/0
+
 uvicorn app.main:app --reload
 ```
 
-Health: `GET /health`
+Health: `GET /health` (needs Redis reachable).
 
 ---
 
