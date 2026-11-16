@@ -14,6 +14,12 @@ docker compose up --build
 
 API: [`http://127.0.0.1:8000`](http://127.0.0.1:8000) · docs: [`/docs`](http://127.0.0.1:8000/docs)
 
+Clear all sessions (e.g. after interrupted `local_test` runs left Redis full of leftovers):
+
+```bash
+docker compose exec redis redis-cli FLUSHDB
+```
+
 ### Local
 
 Redis must be running locally before you start the API. Sessions are stored there; without Redis the app will fail on startup / health.

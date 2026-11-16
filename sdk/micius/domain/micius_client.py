@@ -50,10 +50,19 @@ class MiciusClient:
                 qubits.append(Qubit(id=f"q{i}", owner=self._caller))
             self.api_repository.create_system(self._session_id, qubits)
             self._system_created = True
+            qubit_mapping = {i: f"q{i}" for i in range(circuit.num_qubits)}
+        else:
+            session = self.api_repository.get_session(self._session_id)
+            owned_ids = [
+                qubit.id for qubit in session.qubits if qubit.owner == self._caller
+            ]
+            if circuit.num_qubits > len(owned_ids):
+                raise ValueError(
+                    f"circuit has {circuit.num_qubits} qubits but caller "
+                    f"'{self._caller}' only owns {len(owned_ids)}"
+                )
+            qubit_mapping = {i: owned_ids[i] for i in range(circuit.num_qubits)}
 
-        qubit_mapping = {}
-        for i in range(circuit.num_qubits):
-            qubit_mapping[i] = f"q{i}"
         self.api_repository.create_job(
             self._session_id,
             caller=self._caller,

@@ -1,0 +1,4 @@
+-e ../sdk
+numpy==2.5.4
+qiskit==2.5.2
+httpx==0.28.1
